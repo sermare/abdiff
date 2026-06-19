@@ -1,0 +1,31 @@
+# AbDiff default configuration
+model:
+  c_esm: 512        # AntiBERTy embedding dim (frozen pLM)
+  c: 384            # token channel
+  c_z: 128          # pair channel
+  n_block: 8        # diffusion-transformer blocks
+  n_head: 12
+  sigma_data: 16.0  # EDM data scale
+
+diffusion:
+  s_max: 160.0      # noise schedule (x sigma_data)
+  s_min: 4.0e-4
+  p: 7
+  n_steps: 200      # inference rollout steps
+  n_samples: 4      # samples per target (best-of)
+
+train:
+  epochs: 150
+  bs: 8
+  lr: 3.0e-4
+  max_tok: 320
+  save_every: 20
+  eval_every: 20
+
+data:
+  max_res: 3.5      # SAbDab resolution cutoff (Å)
+  # IMGT CDR ranges: CDR1 27-38, CDR2 56-65, CDR3 105-117
+
+paths:
+  # set ABDIFF_ROOT env var to the project root; data/ checkpoints/ live under it.
+  hmmer_bin: ""     # dir containing hmmscan (for ANARCI), e.g. $CONDA_PREFIX/bin

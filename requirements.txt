@@ -1,0 +1,14 @@
+# Core
+torch>=2.1
+numpy
+# Antibody pLM + numbering (data prep)
+antiberty            # antibody-specific protein language model (512-d)
+anarci               # IMGT numbering / CDR definitions (needs HMMER `hmmscan` on PATH)
+# Structure parsing
+biotite>=0.38        # mmCIF/PDB parsing (PDBxFile API used; <0.39)
+# Benchmarking (optional)
+# fair-esm            # ESMFold baseline (needs einops)
+# Figures
+matplotlib
+# Note: HMMER (hmmscan) must be installed and on PATH for ANARCI:
+#   conda install -c bioconda hmmer

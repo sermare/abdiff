@@ -1,0 +1,9 @@
+{
+  "note": "Framework-superposed Cα-RMSD (Å) on 30 held-out SAbDab Fvs (200-step rollout, best-of-4). CDR-H3 is the headline metric.",
+  "regions": ["fr", "cdr1", "cdr2", "cdr3", "h3", "l3", "all"],
+  "models": {
+    "AbDiff (ours, single-seq)": {"n": 28, "fr": 0.97, "cdr1": 1.27, "cdr2": 1.13, "cdr3": 2.66, "h3": 3.11, "l3": 1.50, "all": 1.36},
+    "AbDiff VHH (n=2)":          {"n": 2,  "fr": 1.53, "cdr1": 4.02, "cdr2": 2.79, "cdr3": 1.22, "h3": 1.22, "l3": null, "all": 1.92}
+  },
+  "pending": ["ESMFold (single-seq)", "Boltz-2 (MSA)", "OpenFold3 (MSA)"]
+}

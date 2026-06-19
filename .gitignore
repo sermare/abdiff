@@ -1,0 +1,17 @@
+# data & artifacts (large / regenerable) — anchored to repo root so abdiff/data/ (code) is kept
+/data/
+/checkpoints/
+/logs/
+/results/
+*.pt
+*.ckpt
+*.cif
+*.pdb
+*.a3m
+*.npz
+!assets/**/*.pdb        # keep example overlay structures shipped in assets
+# python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.DS_Store
