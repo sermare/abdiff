@@ -52,10 +52,13 @@ critical loop that every antibody method is judged on. AbDiff is *single-sequenc
 makes ~3 Å H3 a reasonable starting point; closing the H3 gap (CDR-weighted loss, more data, all-atom)
 is the active work.
 
-### Predicted (blue) vs native (gray), CDR-H3 highlighted
-| good H3 | harder H3 |
+### Predicted (blue) vs native (gray), CDR-H3 highlighted (PyMOL ray-traced cartoon, framework-superposed)
+| good H3 (≈0.8 Å) | harder H3 (≈6 Å) |
 |---|---|
 | ![](assets/overlay_11hb_DC.png) | ![](assets/overlay_10or_GH.png) |
+
+CDR-H3 in **red** (predicted) / **orange** (native). The β-sandwich framework superposes tightly;
+H3 is where prediction and native diverge.
 
 ### Benchmarks (in progress)
 Single-sequence baseline **ESMFold** and MSA-based **Boltz-2** / **OpenFold3** are being scored with
@@ -90,7 +93,9 @@ python abdiff/train.py --data data/train_sabdab_cdr --ckpt-dir checkpoints \
 python abdiff/eval/eval_sample.py --ckpt checkpoints/abdiff_best.pt --data data/train_sabdab_cdr
 
 # 4. figures
-python scripts/make_figures.py
+python scripts/make_figures.py                       # performance bar chart + architecture
+python scripts/render_overlays.py --pdb-dir <pdbs> --truth data/bench_truth.pt \
+       --ids 11hb_DC 10or_GH                          # PyMOL ray-traced structure overlays
 ```
 SLURM examples for a Savio-style cluster are in `slurm/` (sharded prep array, training, eval).
 

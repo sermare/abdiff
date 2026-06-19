@@ -12,3 +12,6 @@ biotite>=0.38        # mmCIF/PDB parsing (PDBxFile API used; <0.39)
 matplotlib
 # Note: HMMER (hmmscan) must be installed and on PATH for ANARCI:
 #   conda install -c bioconda hmmer
+
+# Structure overlay rendering (real cartoons)
+pymol-open-source   # conda install -c conda-forge pymol-open-source

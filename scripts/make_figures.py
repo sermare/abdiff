@@ -59,60 +59,15 @@ def fig_architecture():
     print("wrote architecture.png")
 
 
-def read_ca(pdb):
-    ca = []
-    for ln in open(pdb):
-        if ln.startswith("ATOM") and ln[12:16].strip() == "CA":
-            ca.append([float(ln[30:38]), float(ln[38:46]), float(ln[46:54])])
-    return np.array(ca)
-
-
-def kabsch(P, Q, w):
-    w = w[:, None]; Pc = (P * w).sum(0) / w.sum(); Qc = (Q * w).sum(0) / w.sum()
-    P0, Q0 = P - Pc, Q - Qc
-    U, _, Vh = np.linalg.svd((w * P0).T @ Q0)
-    d = np.sign(np.linalg.det(Vh.T @ U.T)); D = np.eye(3); D[2, 2] = d
-    return (P0 @ (Vh.T @ D @ U.T).T) + Qc
-
-
-def fig_overlay(pred_pdb, true_pdb, cdr, htype, out, title):
-    P, Q = read_ca(pred_pdb), read_ca(true_pdb)
-    n = min(len(P), len(Q), len(cdr)); P, Q, cdr, htype = P[:n], Q[:n], cdr[:n], htype[:n]
-    w = (cdr == 0).astype(float)
-    if w.sum() < 5: w = np.ones(n)
-    P = kabsch(P, Q, w)
-    h3 = (cdr == 3) & (htype == 1)
-    fig = plt.figure(figsize=(5.2, 5.0)); ax = fig.add_subplot(111, projection="3d")
-    ax.plot(*Q.T, c="#888", lw=1.6, label="native")
-    ax.plot(*P.T, c="#1f6fb2", lw=1.6, label="AbDiff")
-    if h3.any():
-        ax.plot(*Q[h3].T, c="#444", lw=3.2)
-        ax.plot(*P[h3].T, c="#d1495b", lw=3.2, label="CDR-H3 (pred)")
-    ax.set_title(title, fontsize=10); ax.legend(fontsize=8, loc="upper left")
-    ax.set_xticks([]); ax.set_yticks([]); ax.set_zticks([])
-    fig.tight_layout(); fig.savefig(out, dpi=150); print("wrote", os.path.basename(out))
-
-
 def main():
+    # Performance bar chart + architecture schematic only.
+    # Structure overlays are rendered with PyMOL (real cartoons) — see scripts/render_overlays.py
     ap = argparse.ArgumentParser()
     ap.add_argument("--summary", default=os.path.join(ASSETS, "bench_summary.json"))
-    ap.add_argument("--pdb-dir", default="")     # dir with <id>_pred.pdb/<id>_true.pdb
-    ap.add_argument("--truth", default="")        # bench_truth.pt for cdr masks
-    ap.add_argument("--overlay-ids", nargs="*", default=["11hb_DC", "10op_QR"])
     args = ap.parse_args()
     os.makedirs(ASSETS, exist_ok=True)
     fig_performance(json.load(open(args.summary)))
     fig_architecture()
-    if args.pdb_dir and args.truth and os.path.exists(args.truth):
-        import torch
-        truth = torch.load(args.truth, map_location="cpu")
-        for hid in args.overlay_ids:
-            pp = os.path.join(args.pdb_dir, f"{hid}_pred.pdb"); tp = os.path.join(args.pdb_dir, f"{hid}_true.pdb")
-            if hid in truth and os.path.exists(pp) and os.path.exists(tp):
-                t = truth[hid]
-                fig_overlay(pp, tp, np.array(t["cdr"]), np.array(t["htype"]),
-                            os.path.join(ASSETS, f"overlay_{hid}.png"),
-                            f"{hid} ({t['format']})  H3-highlighted")
 
 
 if __name__ == "__main__":
