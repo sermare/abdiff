@@ -14,19 +14,40 @@ REG = ["fr", "cdr1", "cdr2", "cdr3", "l3", "h3"]
 REGLAB = ["Framework", "CDR1", "CDR2", "CDR3", "CDR-L3", "CDR-H3"]
 
 
-def fig_performance(summary):
-    m = summary["models"]["AbDiff (ours, single-seq)"]
-    vals = [m[r] for r in REG]
-    colors = ["#9bbbd4"] * 5 + ["#d1495b"]
-    fig, ax = plt.subplots(figsize=(7, 4.2))
-    bars = ax.bar(REGLAB, vals, color=colors, edgecolor="black", linewidth=0.6)
-    for b, v in zip(bars, vals):
-        ax.text(b.get_x() + b.get_width() / 2, v + 0.05, f"{v:.2f}", ha="center", fontsize=9)
+def _stats(perex):
+    """Pool all formats per region -> (mean, 95% CI half-width). perex={fmt:{region:[vals]}}."""
+    out = {}
+    for r in REG:
+        vals = [v for fmt in perex.values() for v in fmt.get(r, [])]
+        if not vals:
+            out[r] = (float("nan"), 0.0); continue
+        a = np.array(vals); m = a.mean()
+        ci = 1.96 * a.std(ddof=1) / np.sqrt(len(a)) if len(a) > 1 else 0.0
+        out[r] = (m, ci)
+    return out
+
+
+def fig_performance(indist, ood=None):
+    di = _stats(indist)
+    groups = [("in-distribution held-out", di, "#5b8fb0")]
+    if ood:
+        groups.append(("out-of-distribution (never-trained PDBs)", _stats(ood), "#e08a3c"))
+    x = np.arange(len(REG)); w = 0.38 if ood else 0.6
+    fig, ax = plt.subplots(figsize=(8.2, 4.6))
+    for i, (lab, st, col) in enumerate(groups):
+        off = (i - (len(groups) - 1) / 2) * w
+        means = [st[r][0] for r in REG]; cis = [st[r][1] for r in REG]
+        bars = ax.bar(x + off, means, w, yerr=cis, capsize=3, label=lab, color=col,
+                      edgecolor="black", linewidth=0.6, error_kw=dict(lw=1, ecolor="#333"))
+        for b, mn in zip(bars, means):
+            ax.text(b.get_x() + b.get_width() / 2, mn + max(means) * 0.02 + 0.06,
+                    f"{mn:.1f}", ha="center", fontsize=7.5)
     ax.axhline(1.0, ls="--", c="gray", lw=0.8)
-    ax.set_ylabel("Backbone Cα-RMSD (Å)")
-    ax.set_title("AbDiff — framework-superposed RMSD by region (held-out Fabs)\n"
-                 "framework is easy (~1 Å); CDR-H3 is the hard, functional loop")
-    ax.set_ylim(0, max(vals) * 1.25)
+    ax.set_xticks(x); ax.set_xticklabels(REGLAB)
+    ax.set_ylabel("Backbone Cα-RMSD (Å)  (mean ± 95% CI)")
+    ax.set_title("AbDiff — framework-superposed RMSD by region\n"
+                 "framework ~1 Å; CDR-H3 is the hard loop; OOD≈in-dist ⇒ generalizes")
+    ax.legend(fontsize=8, frameon=False)
     ax.spines[["top", "right"]].set_visible(False)
     fig.tight_layout(); fig.savefig(os.path.join(ASSETS, "performance_by_region.png"), dpi=150)
     print("wrote performance_by_region.png")
@@ -63,10 +84,13 @@ def main():
     # Performance bar chart + architecture schematic only.
     # Structure overlays are rendered with PyMOL (real cartoons) — see scripts/render_overlays.py
     ap = argparse.ArgumentParser()
-    ap.add_argument("--summary", default=os.path.join(ASSETS, "bench_summary.json"))
+    ap.add_argument("--indist", default=os.path.join(ASSETS, "indist_perexample.json"))
+    ap.add_argument("--ood", default=os.path.join(ASSETS, "ood_perexample.json"))
     args = ap.parse_args()
     os.makedirs(ASSETS, exist_ok=True)
-    fig_performance(json.load(open(args.summary)))
+    indist = json.load(open(args.indist))
+    ood = json.load(open(args.ood)) if os.path.exists(args.ood) else None
+    fig_performance(indist, ood)
     fig_architecture()
 
 

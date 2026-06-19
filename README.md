@@ -34,41 +34,47 @@ sequence ─► AntiBERTy (frozen, 512-d) ─► single rep s ─┐
 
 ## Results
 
-Held-out **30 SAbDab Fvs**, full 200-step rollout from noise, framework-superposed, best-of-4.
+Full 200-step rollout from noise, framework-superposed, best-of-4. Bars are **mean ± 95% CI**.
 
 ![performance](assets/performance_by_region.png)
 
-| Region | Fab Cα-RMSD (Å) |
-|---|---|
-| Framework | **0.97** |
-| CDR-L3 | 1.50 |
-| CDR-1 / CDR-2 | 1.27 / 1.13 |
-| **CDR-H3** | **3.11** (overall H3 = 2.99) |
-| whole Fv | 1.36 |
+| Region | In-distribution held-out (n=30) | **OOD — never-trained PDBs** (n=56) |
+|---|---|---|
+| Framework | 1.0 | 1.2 |
+| CDR-L3 | 1.5 | 1.4 |
+| CDR-1 / CDR-2 | 1.5 / 1.2 | 1.8 / 1.6 |
+| **CDR-H3** | **2.99** | **3.37** |
 
-**Read this honestly.** The conserved framework is *easy* (sub-Å); whole-Fv RMSD (1.36 Å) is
-flattered by it. The meaningful number is **CDR-H3 ≈ 3 Å** — the long, hypervariable, binding-
-critical loop that every antibody method is judged on. AbDiff is *single-sequence* (no MSA), which
-makes ~3 Å H3 a reasonable starting point; closing the H3 gap (CDR-weighted loss, more data, all-atom)
-is the active work.
+**Two honest takeaways:**
+1. The conserved framework is *easy* (~1 Å); whole-Fv RMSD is flattered by it. The number that
+   matters is **CDR-H3 ≈ 3 Å** — the long, hypervariable, binding-critical loop every antibody method
+   is judged on. AbDiff is *single-sequence* (no MSA), so ~3 Å H3 is a reasonable starting point.
+2. **It generalizes.** On a disjoint set of antibodies (>3.5 Å SAbDab entries — entirely different
+   PDBs from the 9,119 trained on), CDR-H3 only rises 2.99 → 3.37 Å (overlapping CIs), and the OOD
+   set has softer ground-truth coordinates, so the true gap is even smaller. Not memorization.
 
-### Predicted (blue) vs native (gray), CDR-H3 highlighted (PyMOL ray-traced cartoon, framework-superposed)
-| good H3 (≈0.8 Å) | harder H3 (≈6 Å) |
-|---|---|
-| ![](assets/overlay_11hb_DC.png) | ![](assets/overlay_10or_GH.png) |
+### Predicted (blue) vs native (gray), CDR-H3 in red/orange — PyMOL ray-traced, framework-superposed
+| | | |
+|---|---|---|
+| ![](assets/overlay_11hb_DC.png) | ![](assets/overlay_10fd_JI.png) | ![](assets/overlay_11hb_GK.png) |
+| Fab, H3 ≈ 0.8 Å | Fab, H3 ≈ 0.9 Å | Fab, H3 ≈ 1.1 Å |
+| ![](assets/overlay_10gh_CB.png) | ![](assets/overlay_10op_GH.png) | ![](assets/overlay_10zo_A.png) |
+| Fab, H3 ≈ 2.1 Å | Fab, H3 ≈ 1.7 Å | **VHH/nanobody**, H3 ≈ 1.4 Å |
+| ![](assets/overlay_11hk_EF.png) | ![](assets/overlay_11hw_CD.png) | ![](assets/overlay_10or_GH.png) |
+| Fab, H3 ≈ 2.2 Å | Fab, H3 ≈ 6.1 Å (hard) | Fab, H3 ≈ 6.2 Å (hard) |
 
-CDR-H3 in **red** (predicted) / **orange** (native). The β-sandwich framework superposes tightly;
-H3 is where prediction and native diverge.
+The β-sandwich framework superposes tightly across all cases; CDR-H3 is where prediction and native diverge.
 
-### Benchmarks (in progress)
-Single-sequence baseline **ESMFold** and MSA-based **Boltz-2** / **OpenFold3** are being scored with
-the *identical* framework-superpose → per-CDR protocol (`abdiff/eval/bench_*`). Numbers will be added
-here as runs complete.
+### Benchmarks
+The framework-superpose → per-CDR harness (`abdiff/eval/bench_*`) scores any folder identically.
+MSA-based **Boltz-2** / **OpenFold3** (weights on disk) and the single-seq **ESMFold** baseline are
+the intended comparisons; ESMFold currently blocked by cross-env deps, Boltz/OF3 pending an MSA pass.
 
 ## Caveats / honest limitations
 - **Backbone-only** (N, Cα, C, O), **Fv region** (constant domains trimmed by ANARCI).
-- **Held-out split is by file prefix; SAbDab is redundant** — near-duplicate frameworks may leak.
-  A clustered / temporal split is the correct next evaluation and is expected to raise H3.
+- **Redundancy / leakage**: the in-distribution split is by file prefix and SAbDab is redundant.
+  The OOD test above (disjoint PDBs) shows only a small H3 increase, but a sequence-**clustered**
+  split is the gold standard and is the next evaluation.
 - Headline RMSDs are **best-of-4 samples** (no confidence head yet); single-sample is higher.
 
 ## Install

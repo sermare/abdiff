@@ -18,6 +18,7 @@ def main():
     ap.add_argument("--n-samples", type=int, default=4)
     ap.add_argument("--steps", type=int, default=200)
     ap.add_argument("--device", default="cuda")
+    ap.add_argument("--dump", default="")  # JSON: per-region per-example RMSD lists (for error bars)
     args = ap.parse_args()
     dev = args.device if (args.device != "cuda" or torch.cuda.is_available()) else "cpu"
     ck = torch.load(args.ckpt, map_location=dev); a = ck.get("args", {})
@@ -61,6 +62,11 @@ def main():
     allh3 = [v for d in agg.values() for v in d.get("h3", [])]
     if allh3:
         print(f"[AbDiff-ours] *** overall CDR-H3 Cα-RMSD = {sum(allh3)/len(allh3):.2f} Å (n={len(allh3)}) ***")
+    if args.dump:
+        import json
+        json.dump({f: {k: list(map(float, v)) for k, v in d.items()} for f, d in agg.items()},
+                  open(args.dump, "w"))
+        print(f"[AbDiff-ours] dumped per-example RMSDs -> {args.dump}")
 
 
 if __name__ == "__main__":
