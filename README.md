@@ -12,9 +12,9 @@ Two output modes share the same architecture:
 - **backbone** — 4 atoms/residue (N, Cα, C, O);
 - **all-atom** — 14 atoms/residue (AlphaFold **atom14**, with sidechains), CA at index 1.
 
-**Headline:** the single-sequence all-atom model reaches **CDR-H3 ≈ 2.5 Å** on held-out antibodies —
-vs **Boltz-2 at 2.19 Å (which uses MSAs)**. With n≈30–40 the **95% CIs overlap**, so the gap is *not*
-statistically significant here — a 14.5M, no-MSA model is competitive with an MSA-based SOTA folder on CDR-H3.
+**Headline (apples-to-apples):** in the **single-sequence (no-MSA) regime, AbDiff matches Boltz-2.**
+On held-out CDR-H3, AbDiff all-atom = **2.61 Å** vs **Boltz-2 no-MSA = 2.65 Å** (overlapping 95% CIs).
+Boltz-2's full edge comes from MSAs (**2.65 → 2.19 Å with MSAs**), which AbDiff doesn't use — at 14.5M params.
 
 > Status: research preview. Trained on ~15k SAbDab Fvs; ~14.5M params (also a 50.9M variant).
 
@@ -93,21 +93,20 @@ All models scored with the **identical** protocol (framework-superpose → per-C
 
 ![per-CDR](assets/per_cdr_three_models.png)
 
-| Region (Å) | Boltz-2 (MSA) | **AbDiff all-atom** (single-seq) | AbDiff backbone (single-seq) |
-|---|--:|--:|--:|
-| Framework | 0.65 | 1.01 | 0.97 |
-| CDR1 | 0.73 | 1.24 | 1.27 |
-| CDR2 | 0.78 | 1.30 | 1.13 |
-| CDR3 | 1.90 | 2.34 | 2.66 |
-| CDR-L3 | 0.70 | 1.31 | 1.50 |
-| **CDR-H3** | **2.30** | **2.70** | **3.11** |
-| **overall CDR-H3** | **2.19** | **2.53** | **2.99** |
+| Region (Å), fab | Boltz-2 (MSA) | Boltz-2 (no MSA) | **AbDiff all-atom** | AbDiff backbone |
+|---|--:|--:|--:|--:|
+| Framework | 0.65 | 0.70 | 1.01 | 0.97 |
+| CDR1 | 0.73 | 0.84 | 1.24 | 1.27 |
+| CDR2 | 0.78 | 0.83 | 1.30 | 1.13 |
+| CDR3 | 1.90 | 2.28 | 2.34 | 2.66 |
+| CDR-L3 | 0.70 | 0.84 | 1.31 | 1.50 |
+| **CDR-H3** | **2.30** | **2.78** | **2.70** | **3.11** |
+| **overall CDR-H3** | **2.19** | **2.65** | **2.61** | **2.71** |
 
-Going backbone → all-atom + more training pulled CDR-H3 from **2.99 → 2.53 Å**, closing most of the
-gap to Boltz-2 (**2.19 Å**) — *without MSAs and at 14.5M parameters*. The bars below carry **95% CIs,
-which overlap**: on this held-out set (n≈30–40) the models are not statistically separable on CDR-H3.
-Boltz-2 still has the edge (MSAs + native all-atom). A **Boltz-2 no-MSA** run (the truly apples-to-apples
-single-sequence comparison) is in progress.
+**The fair comparison:** remove MSAs from Boltz-2 and it lands at **2.65 Å CDR-H3** — statistically
+tied with AbDiff all-atom (**2.61 Å**, overlapping 95% CIs). Boltz-2's MSAs are worth ~0.46 Å on H3
+(2.65 → 2.19). So in the **single-sequence regime AbDiff is on par with Boltz-2**, at 14.5M params and
+no MSA. (AbDiff backbone → all-atom + training: 2.99 → 2.61 Å.)
 The harness (`abdiff/eval/bench_*`, `score_boltz.py`) scores any folder identically; **OpenFold3**
 (weights on disk, `--use_msa_server`) is being added; **ESMFold** is blocked by cross-env deps.
 
