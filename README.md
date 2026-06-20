@@ -112,10 +112,11 @@ All models scored with the **identical** protocol (framework-superpose → per-C
 | **CDR-H3** | **2.30** | **2.78** | **2.70** | **3.11** |
 | **overall CDR-H3** | **2.19** | **2.65** | **2.61** | **2.71** |
 
-**The fair comparison:** remove MSAs from Boltz-2 and it lands at **2.65 Å CDR-H3** — statistically
-tied with AbDiff all-atom (**2.61 Å**, overlapping 95% CIs). Boltz-2's MSAs are worth ~0.46 Å on H3
-(2.65 → 2.19). So in the **single-sequence regime AbDiff is on par with Boltz-2**, at 14.5M params and
-no MSA. (AbDiff backbone → all-atom + training: 2.99 → 2.61 Å.)
+**The fair comparison.** Two SOTA MSA folders agree on CDR-H3 — **Boltz-2 = 2.19 Å, OpenFold3 = 2.20 Å**
+(both ~520–570M params, both with MSAs). Strip MSAs from Boltz-2 and it drops to **2.65 Å**, statistically
+tied with **AbDiff all-atom (2.61 Å, overlapping 95% CIs)**. So in the **single-sequence regime, AbDiff
+matches Boltz-2** — at **14.5M params (~36–40× smaller)** and no MSA. The MSA is worth ~0.45 Å on H3.
+(AbDiff backbone → all-atom + training: 2.99 → 2.61 Å.) Per-CDR + per-example 95% CIs in the figures above.
 The harness (`abdiff/eval/bench_*`, `score_boltz.py`) scores any folder identically; **OpenFold3**
 (weights on disk, `--use_msa_server`) is being added; **ESMFold** is blocked by cross-env deps.
 

@@ -13,6 +13,7 @@ LAB = ["Framework", "CDR1", "CDR2", "CDR3", "CDR-L3", "CDR-H3"]
 # (label, per-example JSON, color) — JSON schema {fmt: {region: [vals]}}
 SOURCES = [
     ("Boltz-2 (MSA)",          "boltz_perregion.json", "#444444"),
+    ("OpenFold3 (MSA)",        "of3_perregion.json",   "#6a4c93"),
     ("Boltz-2 (no MSA)",       "boltz_ss_perregion.json", "#8a8a8a"),
     ("AbDiff all-atom (ours)", "aa_perexample.json",   "#1f6fb2"),
     ("AbDiff backbone (ours)", "indist_perexample.json", "#9bbbd4"),
@@ -109,6 +110,7 @@ def fig_params_vs_rmsd():
         ("AbDiff all-atom",   "aa_perexample.json",      14.5e6, "#1f6fb2", "o"),
         ("Boltz-2 (no MSA)",  "boltz_ss_perregion.json", 521e6,  "#8a8a8a", "s"),
         ("Boltz-2 (MSA)",     "boltz_perregion.json",    521e6,  "#444444", "s"),
+        ("OpenFold3 (MSA)",   "of3_perregion.json",      571e6,  "#6a4c93", "^"),
     ]
     fig, ax = plt.subplots(figsize=(7.4, 5.0))
     for lab, fj, par, col, mk in pts:
