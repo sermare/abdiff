@@ -101,6 +101,35 @@ def fig_perf_allatom():
     print("wrote performance_by_region_allatom.png")
 
 
+def fig_params_vs_rmsd():
+    """Model size (total params) vs CDR-H3 RMSD, with 95% CI. Smaller-left-lower is better."""
+    # (label, json, params, color, marker)
+    pts = [
+        ("AbDiff backbone",   "indist_perexample.json", 14.5e6, "#9bbbd4", "o"),
+        ("AbDiff all-atom",   "aa_perexample.json",      14.5e6, "#1f6fb2", "o"),
+        ("Boltz-2 (no MSA)",  "boltz_ss_perregion.json", 521e6,  "#8a8a8a", "s"),
+        ("Boltz-2 (MSA)",     "boltz_perregion.json",    521e6,  "#444444", "s"),
+    ]
+    fig, ax = plt.subplots(figsize=(7.4, 5.0))
+    for lab, fj, par, col, mk in pts:
+        st = load_stats(fj)
+        if not st or "h3" not in st:
+            continue
+        m, ci, _ = st["h3"]
+        ax.errorbar(par/1e6, m, yerr=ci, fmt=mk, ms=11, color=col, capsize=4,
+                    ecolor=col, elinewidth=1.4, label=lab, zorder=3)
+        ax.annotate(f"{lab}\n{m:.2f} Å", (par/1e6, m), textcoords="offset points",
+                    xytext=(12, 6), fontsize=8)
+    ax.set_xscale("log")
+    ax.set_xlabel("Total parameters (millions, log scale)")
+    ax.set_ylabel("CDR-H3 Cα-RMSD (Å)  (mean ± 95% CI)")
+    ax.set_title("Model size vs CDR-H3 accuracy\nAbDiff matches single-seq Boltz-2 at ~36× fewer parameters")
+    ax.set_xlim(8, 1500); ax.grid(True, which="both", ls=":", lw=0.5, alpha=0.6)
+    ax.spines[["top", "right"]].set_visible(False)
+    fig.tight_layout(); fig.savefig(os.path.join(ASSETS, "params_vs_rmsd.png"), dpi=150)
+    print("wrote params_vs_rmsd.png")
+
+
 if __name__ == "__main__":
     os.makedirs(ASSETS, exist_ok=True)
-    fig_per_cdr(); fig_h3(); fig_perf_allatom()
+    fig_per_cdr(); fig_h3(); fig_perf_allatom(); fig_params_vs_rmsd()

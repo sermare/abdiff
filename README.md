@@ -87,6 +87,15 @@ All 30 held-out predictions (predicted + native PDBs, full all-atom) are generat
 ### All-atom vs backbone, by region (mean ± 95% CI)
 ![allatom-perf](assets/performance_by_region_allatom.png)
 
+## Efficiency — accuracy per parameter
+
+![params vs rmsd](assets/params_vs_rmsd.png)
+
+AbDiff (**14.5M params**) reaches the same CDR-H3 accuracy as single-sequence **Boltz-2 (521M, ~36×
+larger)**. Boltz-2 only pulls ahead with MSAs (2.65 → 2.19 Å). *Why do MSAs help a hypervariable loop
+at all?* — mostly **indirectly**: coevolution constrains the germline framework + CDR1/2, which fixes
+the Fv orientation that CDR-H3 is built on; H3 itself (germline-independent) gets little direct MSA signal.
+
 ## Benchmark vs Boltz-2 — accuracy across the CDRs
 
 All models scored with the **identical** protocol (framework-superpose → per-CDR Cα-RMSD, held-out Fabs).
