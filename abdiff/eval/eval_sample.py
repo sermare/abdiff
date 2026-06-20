@@ -44,15 +44,38 @@ def region_rmsds(pred, gt, atom_mask, cdr, htype):
     return out, Pa
 
 
-def write_pdb(path, coords, mask):
+AA3 = {"A": "ALA", "R": "ARG", "N": "ASN", "D": "ASP", "C": "CYS", "Q": "GLN",
+       "E": "GLU", "G": "GLY", "H": "HIS", "I": "ILE", "L": "LEU", "K": "LYS",
+       "M": "MET", "F": "PHE", "P": "PRO", "S": "SER", "T": "THR", "W": "TRP",
+       "Y": "TYR", "V": "VAL"}
+
+
+_A14 = None
+def _atom14_names():
+    global _A14
+    if _A14 is None:
+        from openfold.np import residue_constants as rc
+        _A14 = rc.restype_name_to_atom14_names
+    return _A14
+
+
+def write_pdb(path, coords, mask, seq=None):
+    """Write a structure. For 4-atom coords -> backbone only; for 14-atom (atom14)
+    coords -> full all-atom (sidechains) using the per-residue atom14 names. Residue
+    identities come from `seq` (1-letter)."""
+    n_atom = coords.shape[1]
+    a14 = _atom14_names() if n_atom == 14 else None
     with open(path, "w") as f:
         a = 1
         for ri in range(coords.shape[0]):
-            for ai, an in enumerate(BB_NAMES):
-                if not mask[ri, ai]:
+            resn = AA3.get(seq[ri], "UNK") if seq and ri < len(seq) else "GLY"
+            names = a14[resn] if (a14 and resn in a14) else (BB_NAMES + [""] * (n_atom - 4))
+            for ai in range(n_atom):
+                an = names[ai] if ai < len(names) else ""
+                if not an or not mask[ri, ai]:
                     continue
                 x, y, z = coords[ri, ai].tolist()
-                f.write(f"ATOM  {a:5d}  {an:<3s} GLY A{ri+1:4d}    "
+                f.write(f"ATOM  {a:5d}  {an:<3s} {resn} A{ri+1:4d}    "
                         f"{x:8.3f}{y:8.3f}{z:8.3f}  1.00  0.00           {an[0]}\n")
                 a += 1
         f.write("END\n")
@@ -67,13 +90,13 @@ def main():
     ap.add_argument("--steps", type=int, default=200)
     ap.add_argument("--device", default="cpu")
     ap.add_argument("--write-pdb", default="")
+    ap.add_argument("--dump", default="")   # JSON of per-region per-example RMSDs (for CI bars)
     args = ap.parse_args()
 
     dev = args.device if (args.device != "cuda" or torch.cuda.is_available()) else "cpu"
     ck = torch.load(args.ckpt, map_location=dev)
     a = ck.get("args", {})
-    model = AbDiffusion(c_esm=ck.get("c_esm", 512), c=a.get("c", 384),
-                        n_block=a.get("n_block", 8)).to(dev).eval()
+    model = AbDiffusion(c_esm=ck.get("c_esm", 512), c=a.get("c", 384), c_z=a.get("c_z", 128), n_head=a.get("n_head", 12), n_block=a.get("n_block", 8)).to(dev).eval()
     model.load_state_dict(ck["model"])
     print(f"[eval] ckpt epoch={ck.get('epoch')} val={ck.get('val', float('nan')):.4f} device={dev}")
 
@@ -110,8 +133,9 @@ def main():
               f"all={r['all']:.2f} fr={r['fr']:.2f} H3={r['h3'] if r['h3']==r['h3'] else float('nan'):.2f} "
               f"H3len={int(((cdr==3)&(ht==1)).sum())}")
         if args.write_pdb:
-            write_pdb(os.path.join(args.write_pdb, f"{rec['id']}_pred.pdb"), Pa.cpu(), m.cpu())
-            write_pdb(os.path.join(args.write_pdb, f"{rec['id']}_true.pdb"), gt.cpu(), m.cpu())
+            sq = rec.get("seq")
+            write_pdb(os.path.join(args.write_pdb, f"{rec['id']}_pred.pdb"), Pa.cpu(), m.cpu(), sq)
+            write_pdb(os.path.join(args.write_pdb, f"{rec['id']}_true.pdb"), gt.cpu(), m.cpu(), sq)
 
     print("\n[eval] mean RMSD (Å), framework-superposed:")
     print(f"  {'fmt':5s} {'n':>4s} {'all':>6s} {'fr':>6s} {'cdr1':>6s} {'cdr2':>6s} {'cdr3':>6s} {'H3':>6s} {'L3':>6s}")
@@ -125,6 +149,11 @@ def main():
     if allh3:
         print(f"[eval] *** overall CDR-H3 Cα-RMSD = {sum(allh3)/len(allh3):.2f} Å "
               f"(n={len(allh3)}, steps={args.steps}, best-of-{args.n_samples}) ***")
+    if args.dump:
+        import json
+        json.dump({f: {k: list(map(float, v)) for k, v in d.items()} for f, d in agg.items()},
+                  open(args.dump, "w"))
+        print(f"[eval] dumped per-example RMSDs -> {args.dump}")
 
 
 if __name__ == "__main__":

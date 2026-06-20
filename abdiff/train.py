@@ -55,6 +55,8 @@ def collate(items):
     asym = torch.zeros(B, N, dtype=torch.long)
     residx = torch.zeros(B, N, dtype=torch.long)
     tmask = torch.zeros(B, N)
+    cdr = torch.zeros(B, N, dtype=torch.long)
+    htype = torch.zeros(B, N, dtype=torch.long)
     for b, r in enumerate(items):
         n = r["emb"].shape[0]
         emb[b, :n] = r["emb"].float()
@@ -63,7 +65,9 @@ def collate(items):
         asym[b, :n] = r["asym_id"].long()
         residx[b, :n] = r["residue_index"].long()
         tmask[b, :n] = 1.0
-    return {"emb": emb, "coords": coords, "atom_mask": amask,
+        if "cdr" in r:
+            cdr[b, :n] = r["cdr"].long(); htype[b, :n] = r["htype"].long()
+    return {"emb": emb, "coords": coords, "atom_mask": amask, "cdr": cdr, "htype": htype,
             "asym_id": asym, "residue_index": residx, "token_mask": tmask}
 
 
@@ -97,6 +101,8 @@ def main():
     ap.add_argument("--bs", type=int, default=4)
     ap.add_argument("--lr", type=float, default=3e-4)
     ap.add_argument("--c", type=int, default=384)
+    ap.add_argument("--c-z", type=int, default=128)
+    ap.add_argument("--n-head", type=int, default=12)
     ap.add_argument("--n-block", type=int, default=8)
     ap.add_argument("--max-tok", type=int, default=512)
     ap.add_argument("--device", default="cuda")
@@ -106,6 +112,8 @@ def main():
     ap.add_argument("--gen-eval-n", type=int, default=10)    # #held-out Fvs per gen eval
     ap.add_argument("--gen-eval-steps", type=int, default=100)
     ap.add_argument("--resume", default="")                  # ckpt to warm-start from
+    ap.add_argument("--cdr-weight", type=float, default=1.0)  # upweight all CDR residues in loss
+    ap.add_argument("--h3-weight", type=float, default=1.0)   # extra multiplier on CDR-H3
     args = ap.parse_args()
 
     dev = args.device if (args.device != "cuda" or torch.cuda.is_available()) else "cpu"
@@ -116,7 +124,10 @@ def main():
     log(f"[data] train={len(train_f)} val={len(val_f)} device={dev}")
 
     c_esm = torch.load(files[0], map_location="cpu")["emb"].shape[1]
-    model = AbDiffusion(c_esm=c_esm, c=args.c, n_block=args.n_block).to(dev)
+    model = AbDiffusion(c_esm=c_esm, c=args.c, c_z=args.c_z, n_head=args.n_head,
+                        n_block=args.n_block).to(dev)
+    log(f"[model] params={sum(p.numel() for p in model.parameters())/1e6:.1f}M "
+        f"(c={args.c} c_z={args.c_z} heads={args.n_head} blocks={args.n_block})")
     if args.resume and os.path.exists(args.resume):
         model.load_state_dict(torch.load(args.resume, map_location=dev)["model"])
         log(f"[resume] warm-started from {args.resume}")
@@ -143,7 +154,7 @@ def main():
         for batch in dl:
             b = to_dev(batch, dev)
             opt.zero_grad()
-            loss, rmsd = edm_loss(model, b)
+            loss, rmsd = edm_loss(model, b, cdr_weight=args.cdr_weight, h3_weight=args.h3_weight)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             opt.step()

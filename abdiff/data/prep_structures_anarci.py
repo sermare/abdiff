@@ -23,14 +23,14 @@ import torch
 
 HERE = os.path.dirname(__file__)
 sys.path.insert(0, HERE)
-from prep_structures import parse_chain_backbone, get_embedder, embed, BB, log
+from prep_structures import parse_chain_backbone, parse_chain_atom14, get_embedder, embed, BB, log
 
 
 # hmmscan lives in the env bin but srun does not reliably propagate PATH to the
 # step. ANARCI's internal check_for_j() calls run_hmmer WITHOUT honoring hmmerpath,
 # so passing hmmerpath is not enough — put the env bin on PATH for ALL subprocesses.
 HMMER_BIN = os.environ.get("ABDIFF_HMMER_BIN",
-                           os.path.join(os.environ.get("CONDA_PREFIX", ""), "bin"))
+                           os.path.join(os.environ.get("CONDA_PREFIX",""),"bin"))
 os.environ["PATH"] = HMMER_BIN + os.pathsep + os.environ.get("PATH", "")
 
 def anarci_domains(named_seqs):
@@ -122,7 +122,7 @@ def main():
         parsed = []  # (chain_name, seq, xyz, mask)
         bad = False
         for ch in entry["chains"]:
-            p = parse_chain_backbone(arr, ch["name"])
+            p = parse_chain_atom14(arr, ch["name"])   # all-atom (atom14); CA at index 1
             if p is None:
                 bad = True; break
             parsed.append((ch["name"], *p))
@@ -135,6 +135,7 @@ def main():
 
         embs, coords, masks, asym, residx, ent, domid = [], [], [], [], [], [], []
         cdr, htype = [], []   # per-token: CDR region (0/1/2/3) and heavy-domain flag
+        seqstr = []           # per-token 1-letter residue (for all-atom PDB output)
         n_var_domains = 0
         asym_idx = 0
         for ci, (nm, seq, xyz, mask) in enumerate(parsed):
@@ -164,6 +165,7 @@ def main():
                 cmap = cdr_labels_for_domain(numbering, s, L) if numbering else {}
                 cdr += [cmap.get(s + k, 0) for k in range(L)]
                 htype += [1 if ct == "H" else 0] * L
+                seqstr.append(sub)
             asym_idx += 1
         if not embs:
             sk += 1; continue
@@ -187,6 +189,7 @@ def main():
             "residue_index": torch.tensor(residx, dtype=torch.int32),
             "entity_id": torch.tensor(ent, dtype=torch.int16),
             "domain_id": torch.tensor(domid, dtype=torch.int16),
+            "seq": "".join(seqstr),                            # 1-letter, token order (for all-atom output)
             "cdr": torch.tensor(cdr, dtype=torch.int8),        # 0=FR,1=CDR1,2=CDR2,3=CDR3
             "htype": torch.tensor(htype, dtype=torch.int8),    # 1=heavy domain
             "format": fmt, "id": entry["id"],

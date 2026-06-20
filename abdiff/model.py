@@ -18,7 +18,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-N_BB = 4  # N, CA, C, O
+N_BB = 14  # atom14 all-atom representation (AF atom14 layout; CA is index 1).
+           # Backbone-only runs used 4; all-atom uses 14. Symbol kept for compatibility.
 
 
 # ----------------------------- conditioning ---------------------------------
@@ -218,8 +219,9 @@ def sample_backbone(model, emb, residue_index, asym_id, token_mask, atom_mask,
     return x
 
 
-def edm_loss(model, batch):
-    """AF3/EDM diffusion training loss on backbone atoms."""
+def edm_loss(model, batch, cdr_weight=1.0, h3_weight=1.0):
+    """AF3/EDM diffusion training loss. cdr_weight upweights all CDR residues,
+    h3_weight additionally upweights CDR-H3 (the hard loop)."""
     coords = batch["coords"]            # [B,N,4,3]
     amask = batch["atom_mask"].float()  # [B,N,4]
     tmask = batch["token_mask"]         # [B,N]
@@ -249,9 +251,17 @@ def edm_loss(model, batch):
     x_hat_a = x_hat_a.reshape(B, N, N_BB, 3)
 
     w = (t ** 2 + sd ** 2) / (t * sd) ** 2          # EDM weighting [B]
-    se = ((x_hat_a - x0) ** 2).sum(-1) * amask      # [B,N,4]
-    per = se.sum((1, 2)) / amask.sum((1, 2)).clamp_min(1.0)
+    se = ((x_hat_a - x0) ** 2).sum(-1) * amask      # [B,N,N_atom]
+    # per-residue CDR weighting: framework=1, any CDR=cdr_weight, CDR-H3 *= h3_weight
+    rw = torch.ones(B, N, device=dev)
+    if ("cdr" in batch) and (cdr_weight != 1.0 or h3_weight != 1.0):
+        cdr = batch["cdr"]; ht = batch["htype"]
+        rw = torch.where(cdr > 0, torch.full_like(rw, cdr_weight), rw)
+        rw = torch.where((cdr == 3) & (ht == 1), rw * h3_weight, rw)
+    se_w = se * rw[..., None]                        # weight atoms by their residue
+    denom = (amask * rw[..., None]).sum((1, 2)).clamp_min(1.0)
+    per = se_w.sum((1, 2)) / denom
     loss = (w * per).mean()
-    with torch.no_grad():
+    with torch.no_grad():                            # report UNweighted rmsd for comparability
         rmsd = torch.sqrt((se.sum((1, 2)) / amask.sum((1, 2)).clamp_min(1.0))).mean()
     return loss, rmsd

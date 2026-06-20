@@ -52,6 +52,50 @@ def embed(runner, seq, device):
     e = runner.embed([seq])[0]                     # [L+2, 512] (CLS + residues + SEP)
     return e[1:1 + len(seq)].to(torch.float16).cpu()
 
+_ATOM14 = None
+def _atom14_table():
+    """AF atom14 layout: aa3 -> list of 14 atom names ('' for unused). CA is index 1."""
+    global _ATOM14
+    if _ATOM14 is None:
+        from openfold.np import residue_constants as rc
+        _ATOM14 = rc.restype_name_to_atom14_names
+    return _ATOM14
+
+
+def parse_chain_atom14(atom_array, chain_id):
+    """All-atom: (seq:str, coords:[L,14,3] float32, mask:[L,14] bool) in AF atom14 order."""
+    import biotite.structure as struc
+    from biotite.sequence import ProteinSequence
+    A14 = _atom14_table()
+    sub = atom_array[atom_array.chain_id == chain_id]
+    if sub.array_length() == 0:
+        return None
+    seq_chars, coords, masks = [], [], []
+    for res in struc.residue_iter(sub):
+        resname = res.res_name[0]
+        try:
+            one = ProteinSequence.convert_letter_3to1(resname)
+        except Exception:
+            one = "X"
+        if one == "X" or resname not in A14:
+            continue
+        names = A14[resname]                      # 14 names, '' for unused slots
+        xyz = np.zeros((14, 3), dtype=np.float32)
+        m = np.zeros(14, dtype=bool)
+        for i, an in enumerate(names):
+            if not an:
+                continue
+            sel = res[res.atom_name == an]
+            if sel.array_length() >= 1:
+                xyz[i] = sel.coord[0]; m[i] = True
+        if not m[1]:                               # require CA (atom14 index 1)
+            continue
+        seq_chars.append(one); coords.append(xyz); masks.append(m)
+    if not seq_chars:
+        return None
+    return "".join(seq_chars), np.stack(coords), np.stack(masks)
+
+
 def parse_chain_backbone(atom_array, chain_id):
     """Return (seq:str, coords:[L,4,3] float32, mask:[L,4] bool) for one chain."""
     import biotite.structure as struc

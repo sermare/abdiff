@@ -13,8 +13,7 @@ from train import AbSet, collate, to_dev
 def eval_ckpt(path, val_files, dev, n, samples, steps):
     ck = torch.load(path, map_location=dev)
     a = ck.get("args", {})
-    model = AbDiffusion(c_esm=ck.get("c_esm", 512), c=a.get("c", 384),
-                        n_block=a.get("n_block", 8)).to(dev).eval()
+    model = AbDiffusion(c_esm=ck.get("c_esm", 512), c=a.get("c", 384), c_z=a.get("c_z", 128), n_head=a.get("n_head", 12), n_block=a.get("n_block", 8)).to(dev).eval()
     model.load_state_dict(ck["model"])
     by_fmt, allv = {}, []
     for fp in val_files[:n]:

@@ -33,6 +33,7 @@ def main():
     ap.add_argument("--ids", nargs="+", required=True)
     ap.add_argument("--width", type=int, default=1100)
     ap.add_argument("--height", type=int, default=900)
+    ap.add_argument("--out-prefix", default="overlay_")
     args = ap.parse_args()
 
     import torch
@@ -77,7 +78,7 @@ def main():
         cmd.color("orange", f"native and ({sel(h3)})")
         cmd.orient("native")
         cmd.zoom("native", 3)
-        out = os.path.join(ASSETS, f"overlay_{hid}.png")
+        out = os.path.join(ASSETS, f"{args.out_prefix}{hid}.png")
         cmd.ray(args.width, args.height)
         cmd.png(out, dpi=150)
         print(f"wrote {out}  (H3 residues: {len(h3)})")

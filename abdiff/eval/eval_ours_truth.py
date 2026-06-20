@@ -22,8 +22,7 @@ def main():
     args = ap.parse_args()
     dev = args.device if (args.device != "cuda" or torch.cuda.is_available()) else "cpu"
     ck = torch.load(args.ckpt, map_location=dev); a = ck.get("args", {})
-    model = AbDiffusion(c_esm=ck.get("c_esm", 512), c=a.get("c", 384),
-                        n_block=a.get("n_block", 8)).to(dev).eval()
+    model = AbDiffusion(c_esm=ck.get("c_esm", 512), c=a.get("c", 384), c_z=a.get("c_z", 128), n_head=a.get("n_head", 12), n_block=a.get("n_block", 8)).to(dev).eval()
     model.load_state_dict(ck["model"])
     print(f"[ours] ckpt epoch={ck.get('epoch')} device={dev}", flush=True)
     truth = torch.load(args.truth, map_location="cpu")
