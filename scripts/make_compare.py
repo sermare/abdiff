@@ -12,8 +12,10 @@ LAB = ["Framework", "CDR1", "CDR2", "CDR3", "CDR-L3", "CDR-H3"]
 
 # (label, per-example JSON, color) — JSON schema {fmt: {region: [vals]}}
 SOURCES = [
+    ("AbDiff CDR-weighted (ours)", "aa_cdrw_perex.json", "#d1495b"),
     ("Boltz-2 (MSA)",          "boltz_perregion.json", "#444444"),
     ("OpenFold3 (MSA)",        "of3_perregion.json",   "#6a4c93"),
+    ("AbDiff big 50M (ours)",  "aa_big_perex.json",    "#2e86c1"),
     ("Boltz-2 (no MSA)",       "boltz_ss_perregion.json", "#8a8a8a"),
     ("AbDiff all-atom (ours)", "aa_perexample.json",   "#1f6fb2"),
     ("AbDiff backbone (ours)", "indist_perexample.json", "#9bbbd4"),
@@ -106,8 +108,9 @@ def fig_params_vs_rmsd():
     """Model size (total params) vs CDR-H3 RMSD, with 95% CI. Smaller-left-lower is better."""
     # (label, json, params, color, marker)
     pts = [
-        ("AbDiff backbone",   "indist_perexample.json", 14.5e6, "#9bbbd4", "o"),
+        ("AbDiff CDR-weighted", "aa_cdrw_perex.json",    14.5e6, "#d1495b", "*"),
         ("AbDiff all-atom",   "aa_perexample.json",      14.5e6, "#1f6fb2", "o"),
+        ("AbDiff big",        "aa_big_perex.json",       50.9e6, "#2e86c1", "o"),
         ("Boltz-2 (no MSA)",  "boltz_ss_perregion.json", 521e6,  "#8a8a8a", "s"),
         ("Boltz-2 (MSA)",     "boltz_perregion.json",    521e6,  "#444444", "s"),
         ("OpenFold3 (MSA)",   "of3_perregion.json",      571e6,  "#6a4c93", "^"),

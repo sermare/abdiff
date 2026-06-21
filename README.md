@@ -12,9 +12,11 @@ Two output modes share the same architecture:
 - **backbone** — 4 atoms/residue (N, Cα, C, O);
 - **all-atom** — 14 atoms/residue (AlphaFold **atom14**, with sidechains), CA at index 1.
 
-**Headline (apples-to-apples):** in the **single-sequence (no-MSA) regime, AbDiff matches Boltz-2.**
-On held-out CDR-H3, AbDiff all-atom = **2.61 Å** vs **Boltz-2 no-MSA = 2.65 Å** (overlapping 95% CIs).
-Boltz-2's full edge comes from MSAs (**2.65 → 2.19 Å with MSAs**), which AbDiff doesn't use — at 14.5M params.
+**Headline:** with a **CDR-weighted loss**, the 14.5M single-sequence AbDiff reaches **CDR-H3 = 2.08 Å**
+on held-out antibodies — **beating Boltz-2 (2.19) and OpenFold3 (2.20)**, which use MSAs and are
+~35–40× larger. (95% CIs overlap at n≈40, so read it as *competitive-to-better*, not a blowout.)
+Ablations show the **loss is the biggest lever** (H3-weighting 2.61→2.08), size helps moderately
+(2.61→2.33 at 50M), and **antibody-specific pLMs beat general ones** (AntiBERTy/AbLang2 < ESM2-650M).
 
 > Status: research preview. Trained on ~15k SAbDab Fvs; ~14.5M params (also a 50.9M variant).
 
@@ -111,6 +113,24 @@ All models scored with the **identical** protocol (framework-superpose → per-C
 | CDR-L3 | 0.70 | 0.84 | 1.31 | 1.50 |
 | **CDR-H3** | **2.30** | **2.78** | **2.70** | **3.11** |
 | **overall CDR-H3** | **2.19** | **2.65** | **2.61** | **2.71** |
+
+### CDR-H3 leaderboard (held-out, framework-superposed, best-of-4)
+| Model | CDR-H3 (Å) | params | MSA |
+|---|--:|--:|:--:|
+| **AbDiff CDR-weighted (ours)** | **2.08** | 14.5M | ❌ |
+| Boltz-2 | 2.19 | 521M | ✅ |
+| OpenFold3 | 2.20 | 571M | ✅ |
+| **AbDiff big (ours)** | 2.33 | 50.9M | ❌ |
+| **AbDiff all-atom (ours)** | 2.61 | 14.5M | ❌ |
+| Boltz-2 (no MSA) | 2.65 | 521M | ❌ |
+| AbDiff (AbLang2 pLM) | 2.71 | 14.5M | ❌ |
+| AbDiff backbone | 2.71 | 14.5M | ❌ |
+| AbDiff (ESM2-650M pLM) | 2.85 | 14.5M | ❌ |
+
+**Ablations — what moves CDR-H3:** (1) **loss** is the biggest lever — upweighting CDR-H3 ~8× drops
+it 2.61→**2.08** (now best on the board); (2) **model size** helps moderately — 50M → 2.33; (3) **pLM
+choice**: antibody-specific AntiBERTy (2.61)/AbLang2 (2.71) beat general ESM2-650M (2.85) *despite ESM2
+being bigger* — antibody pretraining matters more than pLM scale.
 
 **The fair comparison.** Two SOTA MSA folders agree on CDR-H3 — **Boltz-2 = 2.19 Å, OpenFold3 = 2.20 Å**
 (both ~520–570M params, both with MSAs). Strip MSAs from Boltz-2 and it drops to **2.65 Å**, statistically
