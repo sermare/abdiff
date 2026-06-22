@@ -40,6 +40,13 @@ sequence ─► AntiBERTy (frozen, 512-d) ─► single rep s ─┐
   diffusion network only learns embedding → geometry. (Swappable: ESM2, AbLang2, IgBert.)
 - **Format-agnostic.** Fab = 2 chains (asym 0/1), scFv = 1 chain with 2 V-domains, VHH = 1 chain —
   all expressed purely through per-token `asym_id` / `residue_index` features.
+- **CDR-weighted loss.** The training objective upweights CDR atoms (`--cdr-weight`) and CDR-H3
+  specifically (`--h3-weight`); at `2.0 / 4.0` a CDR-H3 atom counts **8×** a framework atom. This is
+  the single biggest lever on accuracy (CDR-H3 **2.61 → 2.08 Å**).
+
+> 📐 **Full architecture write-up:** see **[`ARCHITECTURE.md`](ARCHITECTURE.md)** — the representation,
+> EDM preconditioning, the CDR-weighted loss math, and the AF3-style sampling rollout, all traced to
+> `scripts/model.py`.
 
 ## Results
 
